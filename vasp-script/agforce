@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+from os.path import isfile
+from math import sqrt
+from sys import argv
+
+# Pre
+filelist = argv[1:] if len(argv) > 1 else ["OUTCAR"]
+
+for filename in filelist:
+    if not isfile(filename):
+        print "Sorry... Can't find file."
+        exit(0)
+    OUTCAR = open(filename, "r").readlines()
+
+    NELM, NIONS, EDIFF, EDIFFG = 0, 0, 0, 0
+    for line in OUTCAR:
+        if "NIONS =" in line:
+            NIONS = int(line.split()[-1])
+        elif "EDIFFG =" in line:
+            EDIFFG = float(line.split()[2])
+            break
+
+    ITER, AVERAGE, MAXFORCE, ENERGY, ENERGYSAVE, TIME = 0, 0, 0, 0, 0, 0
+    if len(argv) > 2: print "\033[1;36m%s\033[0m" % filename
+    print "%18s%15s%13s%12s%12s%10s" % ("Iteration", "Energy", "dE", "AvgForce", "MaxForce", "Time(s)")
+    for index, line in enumerate(OUTCAR):
+        if "Iteration" in line:
+            ITER, SCF = line.split()[2][:-1], line.split()[3][:-1],
+
+        elif "TOTAL-FORCE" in line:
+            FORCE = [[float(f) for f in OUTCAR[index + i + 2].split()[3:6]] for i in xrange(NIONS)]
+            MAG = [sqrt(sum([j**2 for j in i])) for i in FORCE]
+            AVERAGE, MAXFORCE = sum(MAG) / NIONS, max(MAG)
+
+        elif "LOOP:" in line:
+            TIME += float(line.split()[6])
+
+        elif "free  energy" in line:
+            ENERGYSAVE, ENERGY = ENERGY, float(line.split()[4])
+            dE = "%10.8f" % abs(ENERGYSAVE - ENERGY) if ENERGYSAVE else "--"
+            print "Iteration%4s(%2s)#%15.8f%13s%12.6f%12.6f%10.2f" % (
+                ITER, SCF, ENERGY, dE, AVERAGE, MAXFORCE, TIME)
+            TIME = 0
+
+    if EDIFFG > 0: print "* EDIFFG(change in energy less than) = %G" % EDIFFG
+    else: print "* EDIFFG(all forces less than) = %G" % -EDIFFG
