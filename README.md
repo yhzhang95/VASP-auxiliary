@@ -1,6 +1,6 @@
 # VASP-auxiliary
 
-##aux-band
+## aux-band
 
 	=== Usage: aux-band [-s] [-f filename] FLAG ===
 	[1]: band(Atom Type),           [2]: band(Atom)
@@ -28,7 +28,7 @@
 	 0.08901    (0.00|0.38|0.00)    -35.8704   1.000  0.9852  0.0001  0.0020
 	 0.09536    (0.00|0.38|0.00)    -35.8705   1.000  0.9851  0.0001  0.0020
 
-##aux-dos
+## aux-dos
 
 	[1]: pdos(Atom Type),           [2]: pdos(Atom)
 	[3]: pdos(Atom Type & Orbital), [4]: pdos(Atom & Orbital)
