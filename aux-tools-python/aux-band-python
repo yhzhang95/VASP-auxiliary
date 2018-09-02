@@ -1,0 +1,182 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from math import sqrt, pi
+from sys import argv, stdout
+from getopt import getopt
+from xml.etree import cElementTree as ET
+
+
+def fcoor(k1, k2):
+    dcoo = [k1[i] - k2[i] for i in xrange(3)]
+    coo = (sum([dcoo[j] * B[j][i] for j in xrange(3)]) for i in xrange(3))
+    return sqrt(sum([i**2 for i in coo]))
+
+
+# Pre
+flag, split_flag, filename = 1, False, 'OUTCAR'
+opts, args = getopt(argv[1:], '-s-f:', ['filename='])
+for opt_name, opt_value in opts:
+    if opt_name in ('-s'):
+        split_flag = True
+
+    if opt_name in ('-f', '--filename'):
+        filename = opt_value
+
+for arg in args:
+    flag = int(arg)
+
+# Help
+if split_flag:
+    stdout.write("\tSelected Mode = Split\n\tband restore ... ")
+else:
+    stdout.write("\t=== Usage: aux-band [-s] [-f filename] flag ===\n")
+    stdout.write("\t[1]: band(Atom Type),           [2]: band(Atom)\n")
+    stdout.write("\t[3]: band(Atom Type & Orbital), [4]: band(Atom & Orbital)\n")
+    stdout.write("\tGet E_fermi from '%s' & Selected flag = %d\n\tband restore ... " % (filename, flag))
+
+# find E-fermi || read OUTCAR
+OUTCAR = open(filename, "r").readlines()
+E_Fermi = [float(line.split()[2]) for line in OUTCAR if "E-fermi" in line][0]
+
+# Read vasprun.xml
+vasp = ET.ElementTree(file='vasprun.xml')
+Apath = './structure[@name="initialpos"]/crystal/varray[@name="basis"]'
+A = [[float(i) for i in line.text.split()]
+     for line in vasp.find(Apath).iter("v")]
+Bpath = './structure[@name="initialpos"]/crystal/varray[@name="rec_basis"]'
+B = [[float(i) * 2 * pi for i in line.text.split()]
+     for line in vasp.find(Bpath).iter("v")]
+AtomNpath = './atominfo/array[@name="atomtypes"]/set'
+AtomN = [int(line[0].text) for line in vasp.find(AtomNpath).iter('rc')]
+AtomTpath = './atominfo/array[@name="atomtypes"]/set'
+AtomT = [line[1].text.strip() for line in vasp.find(AtomTpath).iter('rc')]
+NIONS = xrange(int(vasp.findtext('./atominfo/atoms')))
+NTYPE = int(vasp.findtext('./atominfo/types'))
+Atom = [(AtomT[i], j + 1) for i in xrange(NTYPE) for j in xrange(AtomN[i])]
+Spin = int(vasp.findtext('.//i[@name="ISPIN"]'))
+NBAND = int(vasp.findtext('.//i[@name="NBANDS"]'))
+KPOINTS = [[float(i) for i in line.text.split()]
+           for line in vasp.find('.//varray[@name="kpointlist"]').iter('v')]
+NBANDS, KNUMS, SPINS = xrange(NBAND), xrange(len(KPOINTS)), xrange(Spin)
+SL, OL = [[''], ["(up)", "(dn)"]][Spin - 1], [
+    "-s", "-py", "-pz", "-px", "-dxy", "-dyz", "-dz2", "-dxz", "-dx2", "-f1",
+    "-f2", "-f3", "-f4", "-f5", "-f6", "-f7"
+]
+COORD = [0] + map(fcoor, KPOINTS[:-1], KPOINTS[1:])
+COORD = [sum(COORD[:i + 1]) for i in xrange(len(COORD))]
+
+EIGEN = vasp.find('./calculation/projected/eigenvalues/array[0]/set')
+Energy = [[[[float(i) for i in EIGEN[s][k][b].text.split()] for b in NBANDS]
+           for k in KNUMS] for s in SPINS]  # [SPIN]-[KPOINT]-[BAND]
+
+# output band and occupancy
+if split_flag:
+    data = open("bandsplit.dat", "w")
+    Name = ["N%d%s" % (b + 1, SL[s]) for b in NBANDS for s in SPINS]
+    data.write("%8s%20s" % ("Coord.", "KPOINT     "))
+    [data.write("%10s" % i) for i in Name]
+    data.write("\n")
+    for i in KNUMS:
+        data.write("%8.5f" % COORD[i])
+        data.write("%20s" % ("(%4.2f|%4.2f|%4.2f)" % tuple(KPOINTS[i])))
+        for j, s in [(x, y) for x in xrange(NBAND) for y in SPINS]:
+            data.write("%10.4f" % (Energy[s][i][j][0] - E_Fermi))
+        data.write("\n")
+    data.close()
+    stdout.write("Done!\n")
+    exit(0)
+
+project = vasp.find('./calculation/projected/array/set')
+PRO = [[[[[float(i) for i in project[s][k][b][i].text.split()] for i in NIONS]
+         for b in NBANDS] for k in KNUMS] for s in SPINS] # [SPIN]-[KPOINT]-[BAND]-[ION]
+Orb = xrange(len(list(vasp.find('./calculation/projected/array').iter('field'))))
+
+# output band and occupancy
+data = open("band.dat", "w")
+# header
+data.write("%8s%20s" % ("Coord.", "KPOINT     "))
+if flag == 1:
+    for s in SPINS:
+        data.write("%12s" % ("Energy" + SL[s]))
+        data.write("%8s" % ("Occ" + SL[s]))
+        [data.write("%8s" % (t + SL[s])) for t in AtomT]
+
+elif flag == 2:
+    for s in SPINS:
+        data.write("%12s" % ("Energy" + SL[s]))
+        data.write("%8s" % ("Occ" + SL[s]))
+        [data.write("%10s" % (t + str(n) + SL[s])) for t, n in Atom]
+
+elif flag == 3:
+    for s in SPINS:
+        data.write("%12s" % ("Energy" + SL[s]))
+        data.write("%8s" % ("Occ" + SL[s]))
+        [data.write("%11s" % (t + OL[o] + SL[s])) for t in AtomT for o in Orb]
+
+elif flag == 4:
+    for s in SPINS:
+        data.write("%12s" % ("Energy" + SL[s]))
+        data.write("%8s" % ("Occ" + SL[s]))
+        [data.write("%12s" % (t + str(n) + OL[o] + SL[s])) for t, n in Atom for o in Orb]
+
+data.write("\n")
+# content
+for b in NBANDS:
+    for k in KNUMS:
+        data.write("%8.5f" % COORD[k])
+        data.write("%20s" % ("(%4.2f|%4.2f|%4.2f)" % tuple(KPOINTS[k])))
+        if flag == 1:
+            Name = [(t, s) for s in SPINS for t in AtomT]
+            pband = {t + SL[s]: 0.0 for t, s in Name}
+            Iden = [(t, l, s) for s in SPINS for [t, n], l in zip(Atom, PRO[s][k][b])]
+            for t, line, s in Iden:
+                pband[t + SL[s]] += sum(line)
+            for s in SPINS:
+                data.write("%12.4f" % (Energy[s][k][b][0] - E_Fermi))
+                data.write("%8.3f" % Energy[s][k][b][1])
+                for t in AtomT:
+                    data.write("%8.4f" % pband[t + SL[s]])
+
+        if flag == 2:
+            Name = [(t + str(n), s) for s in SPINS for t, n in Atom]
+            pband = {t + SL[s]: 0.0 for t, s in Name}
+            Iden = [(t + str(n), l, s) for s in SPINS
+                    for [t, n], l in zip(Atom, PRO[s][k][b])]
+            for t, line, s in Iden:
+                pband[t + SL[s]] += sum(line)
+            for s in SPINS:
+                data.write("%12.4f" % (Energy[s][k][b][0] - E_Fermi))
+                data.write("%8.3f" % Energy[s][k][b][1])
+                for t, n in Atom:
+                    data.write("%10.4f" % pband[t + str(n) + SL[s]])
+
+        if flag == 3:
+            Name = [(t, o, s) for s in SPINS for t in AtomT for o in Orb]
+            pband = {t + OL[o] + SL[s]: 0.0 for t, o, s in Name}
+            Iden = [(t, o, l, s) for s in SPINS for o in Orb
+                    for [t, n], l in zip(Atom, PRO[s][k][b])]
+            for t, o, line, s in Iden:
+                pband[t + OL[o] + SL[s]] += line[o]
+            for s in SPINS:
+                data.write("%12.4f" % (Energy[s][k][b][0] - E_Fermi))
+                data.write("%8.3f" % Energy[s][k][b][1])
+                for t, o in [(t, o) for t in AtomT for o in Orb]:
+                    data.write("%11.4f" % pband[t + OL[o] + SL[s]])
+
+        if flag == 4:
+            Name = [(t + str(n), o, s) for s in SPINS for t, n in Atom for o in Orb]
+            pband = {t + OL[o] + SL[s]: 0.0 for t, o, s in Name}
+            Iden = [(t + str(n), o, l, s) for s in SPINS for o in Orb
+                    for [t, n], l in zip(Atom, PRO[s][k][b])]
+            for t, o, line, s in Iden:
+                pband[t + OL[o] + SL[s]] += line[o]
+            for s in SPINS:
+                data.write("%12.4f" % (Energy[s][k][b][0] - E_Fermi))
+                data.write("%8.3f" % Energy[s][k][b][1])
+                for t, o in [(t + str(n), o) for t, n in Atom for o in Orb]:
+                    data.write("%12.4f" % pband[t + OL[o] + SL[s]])
+
+        data.write("\n")
+    data.write("\n")
+data.close()
+stdout.write("Done!\n")

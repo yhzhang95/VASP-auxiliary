@@ -1,0 +1,107 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from sys import argv, stdout
+from xml.etree import cElementTree as ET
+
+# Pre
+flag = int(argv[1]) if len(argv) > 1 else 1
+
+# Read file
+vasp = ET.ElementTree(file='vasprun.xml')
+Spin = int(vasp.findtext('.//i[@name="ISPIN"]'))
+NEDOS = xrange(int(vasp.findtext('.//i[@name="NEDOS"]')))
+E_Fermi = float(vasp.findtext('.//i[@name="efermi"]'))
+SL, SSign = [[''], ["(up)", "(dn)"]][Spin - 1], [[1], [1, -1]][Spin - 1]
+OL = [
+    "-s", "-py", "-pz", "-px", "-dxy", "-dyz", "-dz2", "-dxz", "-dx2", "-f1",
+    "-f2", "-f3", "-f4", "-f5", "-f6", "-f7"
+]
+
+
+AtomNpath = './atominfo/array[@name="atomtypes"]/set'
+AtomN = [int(line[0].text) for line in vasp.find(AtomNpath).iter('rc')]
+AtomTpath = './atominfo/array[@name="atomtypes"]/set'
+AtomT = [line[1].text.strip() for line in vasp.find(AtomTpath).iter('rc')]
+NTYPE = int(vasp.findtext('./atominfo/types'))
+Atom = [(AtomT[i], j + 1) for i in xrange(NTYPE) for j in xrange(AtomN[i])]
+NIONS, SPINS = xrange(int(vasp.findtext('./atominfo/atoms'))), xrange(Spin)
+
+# Help
+stdout.write("\t[1]: pdos(Atom Type),           [2]: pdos(Atom)\n")
+stdout.write("\t[3]: pdos(Atom Type & Orbital), [4]: pdos(Atom & Orbital)\n")
+stdout.write("\tSelected flag = %d\n\tdos restore ... " % flag)
+
+# split distribute
+total = vasp.find('./calculation/dos/total/array/set')
+Energy = [[[float(i) for i in total[s][d].text.split()] for d in NEDOS]
+          for s in SPINS]
+
+# pDOS data
+partial = vasp.find('./calculation/dos/partial/array/set')
+pDOS = [[[[float(k) for k in partial[i][s][d].text.split()[1:]] for d in NEDOS]
+         for s in SPINS] for i in NIONS]
+Orb = xrange(
+    len(list(vasp.find('./calculation/dos/partial/array').iter('field'))) - 1)
+
+# output band and occupancy
+data = open("dos.dat", "w")
+Name, Iden = [], []
+if flag == 1:
+    Name = [(t, s) for t in AtomT for s in SPINS]
+    Iden = [(t, l, s) for [t, n], l in zip(Atom, pDOS) for s in SPINS]
+elif flag == 2:
+    Name = [(t + str(n), s) for [t, n] in Atom for s in SPINS]
+    Iden = [(t + str(n), l, s) for [t, n], l in zip(Atom, pDOS) for s in SPINS]
+elif flag == 3:
+    Name = [(t, o, s) for t in AtomT for o in Orb for s in SPINS]
+    Iden = [(t, o, l, s) for [t, n], l in zip(Atom, pDOS) for o in Orb
+            for s in SPINS]
+elif flag == 4:
+    Name = [(t + str(n), o, s) for t, n in Atom for o in Orb for s in SPINS]
+    Iden = [(t + str(n), o, l, s) for [t, n], l in zip(Atom, pDOS) for o in Orb
+            for s in SPINS]
+# header
+data.write("%9s" % "Energy")
+[data.write("%10s" % ("DOS" + SL[s])) for s in SPINS]
+[data.write("%12s" % ("iDOS" + SL[s])) for s in SPINS]
+if flag == 1:
+    [data.write("%12s" % (t + SL[s])) for t, s in Name]
+elif flag == 2:
+    [data.write("%12s" % (t + SL[s])) for t, s in Name]
+elif flag == 3:
+    [data.write("%12s" % (t + OL[o] + SL[s])) for t, o, s in Name]
+elif flag == 4:
+    [data.write("%14s" % (t + OL[o] + SL[s])) for t, o, s in Name]
+data.write("\n")
+# content
+for d in NEDOS:
+    data.write("%9.4f" % (Energy[0][d][0] - E_Fermi))
+    [data.write("%10.4f" % (Energy[s][d][1] * SSign[s])) for s in SPINS]
+    [data.write("%12.4f" % (Energy[s][d][2] * SSign[s])) for s in SPINS]
+    if flag == 1:
+        pdos = {t + SL[s]: 0.0 for t, s in Name}
+        for t, line, s in Iden:
+            pdos[t + SL[s]] += sum(line[s][d]) * SSign[s]
+        [data.write("%12.4f" % pdos[t + SL[s]]) for t, s in Name]
+
+    elif flag == 2:
+        pdos = {t + SL[s]: 0.0 for t, s in Name}
+        for t, line, s in Iden:
+            pdos[t + SL[s]] += sum(line[s][d]) * SSign[s]
+        [data.write("%12.4f" % pdos[t + SL[s]]) for t, s in Name]
+
+    elif flag == 3:
+        pdos = {t + OL[o] + SL[s]: 0.0 for t, o, s in Name}
+        for t, o, line, s in Iden:
+            pdos[t + OL[o] + SL[s]] += line[s][d][o] * SSign[s]
+        [data.write("%12.4f" % pdos[t + OL[o] + SL[s]]) for t, o, s in Name]
+
+    elif flag == 4:
+        pdos = {t + OL[o] + SL[s]: 0.0 for t, o, s in Name}
+        for t, o, line, s in Iden:
+            pdos[t + OL[o] + SL[s]] += line[s][d][o] * SSign[s]
+        [data.write("%14.4f" % pdos[t + OL[o] + SL[s]]) for t, o, s in Name]
+
+    data.write("\n")
+data.close()
+stdout.write("Done!\n")
