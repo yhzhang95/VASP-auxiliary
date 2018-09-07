@@ -1,5 +1,5 @@
 CPP = g++
-CPPFLAGS = -Ofast -march=native -mtune=native -std=c++11 -malign-double -w -fprofile-use -flto 
+CPPFLAGS = -Ofast -march=native -mtune=native -std=c++11 -malign-double -w -flto 
 #CPPFLAGS = -Ofast -std=c++11 -align -w -m64
 
 BOOST_INCLUDE=./include/
