@@ -10,7 +10,14 @@ import argparse
 import re
 
 
-def parser_ediffg(fb):
+def parse_args():
+    # define parameterd
+    parser = argparse.ArgumentParser('agforce.py')
+    parser.add_argument('--path', type=str, default='./')
+    return parser.parse_args()
+
+
+def parse_ediffg(fb):
     for line in fb:
         if 'EDIFFG' in line:
             EDIFFG = re.search('<i.*>(.*?)</i>', line).group(1)
@@ -111,7 +118,7 @@ def parse_vasprunxml(filename):
         # get ediffg value
         for line in fb:
             if '<separator name="ionic" >' in line:
-                EDIFFG = parser_ediffg(fb)
+                EDIFFG = parse_ediffg(fb)
                 break
 
         # get selective information
@@ -142,9 +149,17 @@ def parse_vasprunxml(filename):
 
 
 if __name__ == '__main__':
-    filenames = glob('vasprun.xml')
+    args = parse_args()
+    filenames = glob('{:s}/vasprun.xml'.format(args.path))
+
     for filename in filenames:
         try:
-            parse_vasprunxml(filename)
+            if len(filenames) > 1:
+                stdout.write('# {:s}:\n'.format(filename))
+                parse_vasprunxml(filename)
+                stdout.write('\n')
+                stdout.flush()
+            else:
+                parse_vasprunxml(filename)
         except:
             pass

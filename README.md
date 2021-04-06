@@ -2,7 +2,7 @@
 
 ## agforce.py
 
-agforce.py script will display the information of process of vasp job, which is only needed vasprun.xml file.
+**agforce.py** script will display the information of process of vasp job, which is only needed vasprun.xml file.
 
 and information format like this:
 
@@ -29,4 +29,4 @@ Iteration scstep          Energy            dE   MaxForce    Time(s)
 * EDIFFG(all forces less than) = 0.02
 ```
 
-the unfinished ion step will end with a star. this script could work with force2xsf.py script which will display the current force of ions.
+the unfinished ion step will end with a star. this script could work with **force2xsf.py** script which will display the current force of ions.
