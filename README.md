@@ -2,7 +2,7 @@
 
 ## agforce.py
 
-**agforce.py** script will display the information of process of vasp job, which is only needed vasprun.xml file.
+The **agforce.py** script will display the vasp job process streamlined information and only needs to read the vasprun.xml file.
 
 and information format like this:
 
@@ -29,4 +29,34 @@ Iteration scstep          Energy            dE   MaxForce    Time(s)
 * EDIFFG(all forces less than) = 0.02
 ```
 
-the unfinished ion step will end with a star. this script could work with **force2xsf.py** script which will display the current force of ions.
+This script can be used in combination with the **force2xsf.py** script to visualize the unconverged forces in ions.
+
+----
+
+## force2xsf.py
+
+The script **force2xsf.py** will grab the current last calculated structure along with the force and stress information and store all the data in a file in xsf format which can display the force information in the structure via VESTA.
+
+``` bash
+CRYSTAL
+PRIMVEC
+        3.72982932     0.00000000     0.00000000
+       -1.86491466     3.23012480     0.00000000
+        0.00000000     0.00000000    17.61340000
+PRIMCOORD
+3 1
+ Pt     3.53179567     0.00000000     9.30674443     0.00000000     0.00000000     0.00000000
+ Se     1.66688789     1.07670942     7.98885418    -0.00047015    -0.00031347     0.11159362
+ Se    -0.19802680     2.15341538    10.62463467    -0.00024832    -0.00092422    -0.11092542
+PRIMFORCE
+        0.11159505
+PRIMSTRESS
+       -4.48791712     0.00665968     0.00153784
+        0.00665968    -4.49674782     0.01762451
+        0.00153793     0.01762446    -2.33791339
+```
+
+----
+
+## xdat2arc.py
+
