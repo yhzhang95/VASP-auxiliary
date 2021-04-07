@@ -3,6 +3,18 @@ try:
     from xml.etree import cElementTree as ET
 except:
     from xml.etree import ElementTree as ET
+
+try:
+    from numpy import dot
+except:
+
+    def dot(positions, lattice):
+        return [[
+            sum(pos[row] * lattice[row][col] for row in range(3))
+            for col in range(3)
+        ] for pos in positions]
+
+
 from sys import stdout
 from glob import glob
 from math import sqrt
@@ -145,13 +157,7 @@ def parse_calculation(lastcal, EDIFFG, selective, logicalall):
             stress = [[float(i) for i in sline.text.split()]
                       for sline in child]
 
-    def dot(vec, lattice):
-        return [
-            sum([vec[row] * lattice[row][col] for row in range(3)])
-            for col in range(3)
-        ]
-
-    positions = [dot(pos, lattice) for pos in positions]
+    positions = dot(positions, lattice)
 
     return lattice, positions, forces, stress
 

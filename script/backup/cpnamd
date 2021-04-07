@@ -1,0 +1,26 @@
+#!/usr/bin/env python
+
+submit = [
+    '#!/bin/sh\n', 
+    '#BSUB -J zyh_NAMD\n', 
+    '#BSUB -n 56\n', 
+    '#BSUB -q normal\n',
+    '#BSUB -R "span[ptile=28]"\n', 
+    '#BSUB -o %J.log\n',
+    '#BSUB -m "c01n01 c01n02 c01n03 c01n04 c01n05 c01n06 c01n07 c01n08 c01n09 c01n10 c01n11 c01n12 c01n13 c01n14 c01n15 c01n16 c02n05 c02n06 c02n07 c02n08 c02n09 c02n10 c02n11 c02n12 c02n13 c02n14 c02n15 c02n16 c03n01 c03n02 c03n03 c03n04 c03n05 c03n06 c03n07 c03n08 c03n09 c03n10 c03n11 c03n12 c03n13 c03n14 c03n15 c03n16"\n',
+    '\n', 
+    "NP=`awk '{for(i=2;i<=NF;i+=2)S+=$i}{print S}' <<< $LSB_MCPU_HOSTS`\n", 
+    'mpirun -np $NP pyx-namd > log \n'
+]
+open("submit.LSF", "w").writelines(submit)
+
+STATE = [
+    'Name Eshift state\n', 
+    'GS  0 106\n', 
+    'S1  0 107\n', 
+    'S2  0 108\n',
+    'S3  0 109 \n', 
+    'S4  0 110\n', 
+    'S5  0 111\n'
+]
+open("STATECAR", "w").writelines(STATE)
