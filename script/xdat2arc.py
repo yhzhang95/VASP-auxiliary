@@ -33,8 +33,6 @@ except:
 
 
 from math import acos, pi
-from sys import stdout
-from glob import glob
 import argparse
 import datetime
 
@@ -42,7 +40,7 @@ import datetime
 def parse_args():
     # define parameterd
     parser = argparse.ArgumentParser('xdat2arc.py')
-    parser.add_argument('--path', type=str, default='./')
+    parser.add_argument('--path', type=str, default='./vasprun.xml')
     parser.add_argument('--supercell', type=str, default='1 1 1')
     return parser.parse_args()
 
@@ -69,6 +67,10 @@ def reshape(prev_position, next_position, lattice):
 
     offsets = dot([[dx, dy, dz] for dx in range(-1, 2) for dy in range(-1, 2)
                    for dz in range(-1, 2)], lattice)
+    try:
+        offsets = offsets.tolist()
+    except:
+        pass
 
     for idx, (coord1, coord2) in enumerate(zip(prev_position, next_position)):
         if distance(coord1, coord2) > 0.8:
@@ -161,7 +163,8 @@ def parse_vasprunxml(filename, args):
                 atoms = parse_atoms(fb)
                 break
 
-        with open('trajectory.arc', 'w') as out:
+        arcname = filename.replace('vasprun.xml', 'trajectory.arc')
+        with open(arcname, 'w') as out:
             out.write('!BIOSYM archive 3\nPBC=ON\n')
 
             # get last calculation information
@@ -189,17 +192,8 @@ def parse_vasprunxml(filename, args):
 
 if __name__ == '__main__':
     args = parse_args()
-    filenames = glob('{:s}/vasprun.xml'.format(args.path))
 
-    for filename in filenames:
-
-        try:
-            if len(filenames) > 1:
-                stdout.write('# {:s}:\n'.format(filename))
-                parse_vasprunxml(filename, args)
-                stdout.write('\n')
-                stdout.flush()
-            else:
-                parse_vasprunxml(filename, args)
-        except:
-            pass
+    try:
+        parse_vasprunxml(args.path, args)
+    except Exception as e:
+        print("type error: " + str(e))

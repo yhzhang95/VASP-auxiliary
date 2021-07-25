@@ -5,6 +5,7 @@ import argparse
 def parse_args():
     # define parameterd
     parser = argparse.ArgumentParser('xdat2arc.py')
+    parser.add_argument('--filename', type=str, default='LOCPOT')
     parser.add_argument('--axis', type=str, default='z')
     return parser.parse_args()
 
@@ -12,9 +13,9 @@ def parse_args():
 try:
     import numpy as np
 
-    def parse_locpot(filename, args):
+    def parse_locpot(args):
         # Get header of LOCPOT
-        locpot = open(filename, 'r').readlines()
+        locpot = open(args.filename, 'r').readlines()
         lattice = [line.split() for line in locpot[2:5]]
         lattice = np.array(lattice, dtype='float')
 
@@ -80,9 +81,9 @@ try:
 except:
     from math import sqrt
 
-    def parse_locpot(filename, args):
+    def parse_locpot(args):
         # Get header of LOCPOT
-        locpot = open(filename, 'r').readlines()
+        locpot = open(args.filename, 'r').readlines()
         lattice = [[float(i) for i in line.split()] for line in locpot[2:5]]
 
         # get some parameter
@@ -167,4 +168,4 @@ except:
 
 if __name__ == '__main__':
     args = parse_args()
-    parse_locpot('LOCPOT', args)
+    parse_locpot(args)

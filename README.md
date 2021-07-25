@@ -59,5 +59,3 @@ PRIMSTRESS
 ----
 
 ## xdat2arc.py
-
-<img src="http://yuyue.seu.edu.cn/eduplus/control/validateimage" height="24">
