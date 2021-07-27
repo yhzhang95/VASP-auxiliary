@@ -1,7 +1,10 @@
 #!/usr/bin/env python
-import os, sys, argparse, numpy as np
+import numpy as np
+import argparse
+import sys
+import os
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser('chgsum.py')
 parser.add_argument('-o',
                     '--output',
                     nargs=1,

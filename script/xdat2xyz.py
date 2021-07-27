@@ -32,8 +32,6 @@ except:
         return sqrt(sum([i**2 for i in vector]))
 
 
-from sys import stdout
-from glob import glob
 import argparse
 
 
