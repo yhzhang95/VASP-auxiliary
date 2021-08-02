@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# mail: yhzhang95@seu.edu.cn
+# author: yehui zhang / southeast university
 try:
     from xml.etree import cElementTree as ET
 except:
@@ -13,7 +15,7 @@ import re
 def parse_args():
     # define parameterd
     parser = argparse.ArgumentParser('agforce.py')
-    parser.add_argument('--path', type=str, default='./')
+    parser.add_argument('--path', type=str, default='./vasprun.xml')
     return parser.parse_args()
 
 
@@ -150,16 +152,8 @@ def parse_vasprunxml(filename):
 
 if __name__ == '__main__':
     args = parse_args()
-    filenames = glob('{:s}/vasprun.xml'.format(args.path))
 
-    for filename in filenames:
-        try:
-            if len(filenames) > 1:
-                stdout.write('# {:s}:\n'.format(filename))
-                parse_vasprunxml(filename)
-                stdout.write('\n')
-                stdout.flush()
-            else:
-                parse_vasprunxml(filename)
-        except:
-            pass
+    try:
+        parse_vasprunxml(args.path)
+    except:
+        pass

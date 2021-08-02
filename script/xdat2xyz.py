@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# mail: yhzhang95@seu.edu.cn
+# author: yehui zhang / southeast university
 try:
     from xml.etree import cElementTree as ET
 except:
