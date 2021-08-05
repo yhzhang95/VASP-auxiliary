@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # mail: yhzhang95@seu.edu.cn
 # author: yehui zhang / southeast university
+# todo:
 try:
     from xml.etree import cElementTree as ET
 except:
@@ -71,10 +72,20 @@ def parse_calculation(fb, iteration, energybakup, content, positions):
         time = 0
         for line in readlines:
             if 'total' in line:
-                text = re.search('<time.*>(.*?)</time>', line).group(1)
-                time += float(text.split()[-1])
+                # from vasp.5.4.4 src/xml.F
+                #   WRITE(uixml,'(2F8.2)',ADVANCE="No") time1,time2
+                #   WRITE(uixml, '("</time>")')
+                text = re.search('<time.*>(.*?)</time>', line).group(1)[-8:]
 
-        content += '{:>9d} {:>6s} {:>15s} {:>13s} {:>10s} {:>10.1F}\n'.format(
+                if '*' not in text:
+                    time += float(text)
+                else:
+                    time = '***'
+                    break
+        else:
+            time = '{:>10.1F}'.format(time)
+
+        content += '{:>9d} {:>6s} {:>15s} {:>13s} {:>10s} {:>10s}\n'.format(
             iteration, scstep, '-', '-', '-', time)
 
         stdout.write(content)
@@ -105,9 +116,14 @@ def parse_calculation(fb, iteration, energybakup, content, positions):
                         de = '-'
 
         elif child.tag == 'time':
-            time = float(child.text.split()[-1])
+            # time = float(child.text.split()[-1])
+            time = child.text[-8:]
+            if '*' not in time:
+                time = '{:>10.1F}'.format(float(time))
+            else:
+                time = '***'
 
-    content += '{:>9d} {:>6s} {:>15.8F} {:>13s} {:>10.6F} {:>10.1F}\n'.format(
+    content += '{:>9d} {:>6s} {:>15.8F} {:>13s} {:>10.6F} {:>10s}\n'.format(
         iteration, str(scstep), energy, de, maxforce, time)
 
     stdout.write(content)
@@ -155,5 +171,5 @@ if __name__ == '__main__':
 
     try:
         parse_vasprunxml(args.path)
-    except:
-        pass
+    except Exception as e:
+        print("type error: " + str(e))
