@@ -65,8 +65,10 @@ def lattice_to_cell(lattice):
     return normvec + angles
 
 
-def reshape(prev_position, next_position, lattice):
-    if prev_position is None: return next_position
+def reshape(prev_position, next_position, lattice, atoms):
+    # if prev_position is None: return next_position
+    if prev_position is None:
+        return fix_h2o_pbc(next_position, lattice, atoms)
 
     offsets = dot([[dx, dy, dz] for dx in range(-1, 2) for dy in range(-1, 2)
                    for dz in range(-1, 2)], lattice)
@@ -83,6 +85,33 @@ def reshape(prev_position, next_position, lattice):
             next_position[idx] = add(coord2, closer[1])
 
     return next_position
+
+
+def fix_h2o_pbc(position, lattice, atoms):
+    offsets = dot([[dx, dy, dz] for dx in range(-1, 2) for dy in range(-1, 2)
+                   for dz in range(-1, 2)], lattice)
+    try:
+        offsets = offsets.tolist()
+    except:
+        pass
+
+    o_position = [pos for pos, symbol in zip(position, atoms) if symbol == 'O']
+    h_position = [(idx, pos)
+                  for idx, (pos, symbol) in enumerate(zip(position, atoms))
+                  if symbol == 'H']
+
+    for idx, h_pos in h_position:
+        oh_dist = min([distance(o_pos, h_pos) for o_pos in o_position])
+        if oh_dist <= 1.2: continue
+
+        for offset in offsets:
+            oh_dist = min(
+                [distance(o_pos, add(h_pos, offset)) for o_pos in o_position])
+            if oh_dist <= 1.2:
+                position[idx] = add(h_pos, offset)
+                break
+
+    return position
 
 
 def parse_atoms(fb):
@@ -181,7 +210,7 @@ def parse_vasprunxml(filename, args):
 
                             lattice, positions = parse_calculation(readlines)
                             positions = reshape(prev_position, positions,
-                                                lattice)
+                                                lattice, atoms)
                             prev_position, readlines = positions, []
 
                             cell = lattice_to_cell(lattice)

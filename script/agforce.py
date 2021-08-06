@@ -8,7 +8,6 @@ except:
     from xml.etree import ElementTree as ET
 from sys import stdout
 from math import sqrt
-from glob import glob
 import argparse
 import re
 
